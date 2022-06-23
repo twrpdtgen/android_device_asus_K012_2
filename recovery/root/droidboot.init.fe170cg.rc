@@ -1,0 +1,56 @@
+# REDHOOKBAY specific rules for droidboot
+on early-init
+    insmod /lib/modules/pnwdisp.ko
+    insmod /lib/modules/pvrsgx.ko
+    chmod 0600 /dev/dri/controlD64
+
+on init
+    # Android creates by-name disk links with the disk controller
+    # in the generated path, so that the names pulled out of the GPT
+    # can be associated with the correct disk. Create a shortcut to
+    # /dev/block/by-name so that we can use the same fstabs everywhere.
+    symlink /dev/block/pci/pci0000:00/0000:00:01.0/by-name /dev/block/by-name
+
+on boot
+    insmod /lib/modules/rmi4.ko boot_mode=1
+    insmod /lib/modules/sgx.ko
+    insmod /lib/modules/videobuf-core.ko
+    insmod /lib/modules/videobuf-dma-contig.ko
+    insmod /lib/modules/videobuf-vmalloc.ko
+    insmod /lib/modules/videobuf2-core.ko
+    insmod /lib/modules/videobuf2-memops.ko
+    insmod /lib/modules/ov8830.ko
+    insmod /lib/modules/mt9m114.ko
+    insmod /lib/modules/lm3554.ko
+    insmod /lib/modules/atomisp.ko dypool_enable=y repool_pgnr=18432
+    symlink /dev/dri/card0 /dev/card0
+
+	#upi_gauge
+	mkdir /config 0775 system system
+    mount ext4 /dev/block/by-name/config /config rw noatime
+    chown system system /dev/ug31xx
+    chmod 0660 /dev/ug31xx
+
+    asus_exec /system/bin/touch /config/upi_gg
+    asus_exec /system/bin/touch /config/upi_bo
+    chown system system /config/upi_gg
+    chmod 0660 /config/upi_gg
+    chown system system /config/upi_bo
+    chmod 0664 /config/upi_bo
+    chown system system /sys/module/ug31xx_battery/parameters/op_options
+    start upi_ug31xx
+
+    start pvrsrvctl
+
+
+
+service pvrsrvctl /system/bin/pvrsrvctl --no-module --start
+    class core
+    oneshot
+    user root
+
+service upi_ug31xx /sbin/upi_ug31xx
+    class core
+    user system
+    seclabel u:r:upi_ug31xx:s0
+    disabled
